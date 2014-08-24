@@ -238,6 +238,90 @@ class RecentInfoUpdaterThread(threading.Thread):
             
             item_count = item_count + 1
         
+        #Updating Recent Video List
+        self.logMsg("Updating Recent Movie List")
+        
+        recentUrl = "http://" + mb3Host + ":" + mb3Port + "/mediabrowser/Users/" + userid + "/Items?Limit=10&Recursive=true&SortBy=DateCreated&Fields=Path,Genres,MediaStreams,Overview,CriticRatingSummary&SortOrder=Descending&Filters=IsUnplayed,IsNotFolder&IncludeItemTypes=Video&format=json"
+        
+        try:
+            requesthandle = urllib.urlopen(recentUrl, proxies={})
+            jsonData = requesthandle.read()
+            requesthandle.close()
+        except Exception, e:
+            self.logMsg("RecentInfoUpdaterThread updateRecent urlopen : " + str(e) + " (" + recentUrl + ")", level=0)
+            return
+
+        result = json.loads(jsonData)
+        self.logMsg("Recent Video Json Data : " + str(result), level=2)
+        
+        result = result.get("Items")
+        if(result == None):
+            result = []
+            
+        WINDOW = xbmcgui.Window( 10000 )
+
+        item_count = 1
+        for item in result:
+            title = "Missing Title"
+            if(item.get("Name") != None):
+                title = item.get("Name").encode('utf-8')
+            
+            rating = item.get("CommunityRating")
+            criticrating = item.get("CriticRating")
+            criticratingsummary = ""
+            if(item.get("CriticRatingSummary") != None):
+                criticratingsummary = item.get("CriticRatingSummary").encode('utf-8')
+            plot = item.get("Overview")
+            if plot == None:
+                plot=''
+            plot=plot.encode('utf-8')
+            year = item.get("ProductionYear")
+            if(item.get("RunTimeTicks") != None):
+                runtime = str(int(item.get("RunTimeTicks"))/(10000000*60))
+            else:
+                runtime = "0"
+
+            item_id = item.get("Id")
+            
+            thumbnail = self.getImageLink(item, "Primary", str(item_id))
+            logo = self.getImageLink(item, "Logo",str(item_id))
+            fanart = self.getImageLink(item, "Backdrop",str(item_id))
+            
+            url =  mb3Host + ":" + mb3Port + ',;' + item_id
+            playUrl = "plugin://plugin.video.xbmb3c/?url=" + url + '&mode=' + str(_MODE_BASICPLAY)
+            playUrl = playUrl.replace("\\\\","smb://")
+            playUrl = playUrl.replace("\\","/")
+
+            self.logMsg("LatestVideoMB3." + str(item_count) + ".Title = " + title, level=2)
+            self.logMsg("LatestVideoMB3." + str(item_count) + ".Thumb = " + thumbnail, level=2)
+            self.logMsg("LatestVideoMB3." + str(item_count) + ".Path  = " + playUrl, level=2)
+            self.logMsg("LatestVideoMB3." + str(item_count) + ".Art(fanart)  = " + fanart, level=2)
+            self.logMsg("LatestVideoMB3." + str(item_count) + ".Art(clearlogo)  = " + logo, level=2)
+            self.logMsg("LatestVideoMB3." + str(item_count) + ".Art(poster)  = " + thumbnail, level=2)
+            self.logMsg("LatestVideoMB3." + str(item_count) + ".Rating  = " + str(rating), level=2)
+            self.logMsg("LatestVideoMB3." + str(item_count) + ".CriticRating  = " + str(criticrating), level=2)
+            self.logMsg("LatestVideoMB3." + str(item_count) + ".CriticRatingSummary  = " + criticratingsummary, level=2)
+            self.logMsg("LatestVideoMB3." + str(item_count) + ".Plot  = " + plot, level=2)
+            self.logMsg("LatestVideoMB3." + str(item_count) + ".Year  = " + str(year), level=2)
+            self.logMsg("LatestVideoMB3." + str(item_count) + ".Runtime  = " + str(runtime), level=2)
+            
+            WINDOW.setProperty("LatestVideoMB3." + str(item_count) + ".Title", title)
+            WINDOW.setProperty("LatestVideoMB3." + str(item_count) + ".Thumb", thumbnail)
+            WINDOW.setProperty("LatestVideoMB3." + str(item_count) + ".Path", playUrl)
+            WINDOW.setProperty("LatestVideoMB3." + str(item_count) + ".Art(fanart)", fanart)
+            WINDOW.setProperty("LatestVideoMB3." + str(item_count) + ".Art(clearlogo)", logo)
+            WINDOW.setProperty("LatestVideoMB3." + str(item_count) + ".Art(poster)", thumbnail)
+            WINDOW.setProperty("LatestVideoMB3." + str(item_count) + ".Rating", str(rating))
+            WINDOW.setProperty("LatestVideoMB3." + str(item_count) + ".CriticRating", str(criticrating))
+            WINDOW.setProperty("LatestVideoMB3." + str(item_count) + ".CriticRatingSummary", criticratingsummary)
+            WINDOW.setProperty("LatestVideoMB3." + str(item_count) + ".Plot", plot)
+            WINDOW.setProperty("LatestVideoMB3." + str(item_count) + ".Year", str(year))
+            WINDOW.setProperty("LatestVideoMB3." + str(item_count) + ".Runtime", str(runtime))
+            
+            WINDOW.setProperty("LatestMovieMB3.Enabled", "true")
+            
+            item_count = item_count + 1
+
         #Updating Recent TV Show List
         self.logMsg("Updating Recent TV Show List")
         
@@ -556,4 +640,87 @@ class RecentInfoUpdaterThread(threading.Thread):
             WINDOW.setProperty("LatestPhotoMB3.Enabled", "true")
             
             item_count = item_count + 1
+
+        #Updating Recent musicvideo List
+        self.logMsg("Updating Recent musicvideo List")
+        
+        recentUrl = "http://" + mb3Host + ":" + mb3Port + "/mediabrowser/Users/" + userid + "/Items?Limit=10&Recursive=true&SortBy=DateCreated&Fields=Path,Genres,MediaStreams,Overview&SortOrder=Descending&Filters=IsUnplayed,IsNotFolder&IsVirtualUnaired=false&IsMissing=False&IncludeItemTypes=Musicvideo&format=json"
+        
+        try:
+            requesthandle = urllib.urlopen(recentUrl, proxies={})
+            jsonData = requesthandle.read()
+            requesthandle.close()
+        except Exception, e:
+            self.logMsg("updateRecent urlopen : " + str(e) + " (" + recentUrl + ")", level=0)
+            return
+
+        result = json.loads(jsonData)
+        self.logMsg("Recent musicvideo Json Data : " + str(result), level=2)
+        
+        result = result.get("Items")
+        if(result == None):
+            result = []
+
+        item_count = 1
+        for item in result:
+            title = "Missing Title"
+            if(item.get("Name") != None):
+                title = item.get("Name").encode('utf-8')
+                
+            musicvideoName = "Missing Name"
+            if(item.get("Name") != None):
+                musicvideoName = item.get("Name").encode('utf-8')
+
+            rating = str(item.get("CommunityRating"))
+            plot = item.get("Overview")
+            if plot == None:
+                plot=''
+            plot=plot.encode('utf-8')
+            year = item.get("ProductionYear")
+            if(item.get("RunTimeTicks") != None):
+                runtime = str(int(item.get("RunTimeTicks"))/(10000000*60))
+            else:
+                runtime = "0"
+
+            item_id = item.get("Id")
+           
+            poster = self.getImageLink(item, "Primary", str(item_id))
+            thumbnail = self.getImageLink(item, "Primary", str(item_id))
+            logo = self.getImageLink(item, "Logo", str(item_id))
+            fanart = self.getImageLink(item, "Backdrop", str(item_id))
+            banner = self.getImageLink(item, "Banner", str(item_id))
             
+            url =  mb3Host + ":" + mb3Port + ',;' + item_id
+            playUrl = "plugin://plugin.video.xbmb3c/?url=" + url + '&mode=' + str(_MODE_BASICPLAY)
+            playUrl = playUrl.replace("\\\\","smb://")
+            playUrl = playUrl.replace("\\","/")
+
+            self.logMsg("LatestMusicvideoMB3." + str(item_count) + ".Title = " + title, level=2)
+            self.logMsg("LatestMusicvideoMB3." + str(item_count) + ".Thumb = " + thumbnail, level=2)
+            self.logMsg("LatestMusicvideoMB3." + str(item_count) + ".Path  = " + playUrl, level=2)
+            self.logMsg("LatestMusicvideoMB3." + str(item_count) + ".Art(fanart)  = " + fanart, level=2)
+            self.logMsg("LatestMusicvideoMB3." + str(item_count) + ".Art(clearlogo)  = " + logo, level=2)
+            self.logMsg("LatestMusicvideoMB3." + str(item_count) + ".Art(poster)  = " + thumbnail, level=2)
+            self.logMsg("LatestMusicvideoMB3." + str(item_count) + ".Rating  = " + str(rating), level=2)
+            #self.logMsg("LatestMovieMB3." + str(item_count) + ".CriticRating  = " + str(criticrating), level=2)
+            #self.logMsg("LatestMovieMB3." + str(item_count) + ".CriticRatingSummary  = " + criticratingsummary, level=2)
+            self.logMsg("LatestMusicvideoMB3." + str(item_count) + ".Plot  = " + plot, level=2)
+            self.logMsg("LatestMusicvideoMB3." + str(item_count) + ".Year  = " + str(year), level=2)
+            self.logMsg("LatestMusicvideoMB3." + str(item_count) + ".Runtime  = " + str(runtime), level=2)
+            
+            WINDOW.setProperty("LatestMusicvideoMB3." + str(item_count) + ".Title", title)
+            WINDOW.setProperty("LatestMusicvideoMB3." + str(item_count) + ".Thumb", thumbnail)
+            WINDOW.setProperty("LatestMusicvideoMB3." + str(item_count) + ".Path", playUrl)
+            WINDOW.setProperty("LatestMusicvideoMB3." + str(item_count) + ".Art(fanart)", fanart)
+            WINDOW.setProperty("LatestMusicvideoMB3." + str(item_count) + ".Art(clearlogo)", logo)
+            WINDOW.setProperty("LatestMusicvideoMB3." + str(item_count) + ".Art(poster)", thumbnail)
+            WINDOW.setProperty("LatestMusicvideoMB3." + str(item_count) + ".Rating", str(rating))
+            #WINDOW.setProperty("LatestMovieMB3." + str(item_count) + ".CriticRating", str(criticrating))
+            #WINDOW.setProperty("LatestMovieMB3." + str(item_count) + ".CriticRatingSummary", criticratingsummary)
+            WINDOW.setProperty("LatestMusicvideoMB3." + str(item_count) + ".Plot", plot)
+            WINDOW.setProperty("LatestMusicvideoMB3." + str(item_count) + ".Year", str(year))
+            WINDOW.setProperty("LatestMusicvideoMB3." + str(item_count) + ".Runtime", str(runtime))
+            
+            WINDOW.setProperty("LatestMusicvideoMB3.Enabled", "true")
+            
+            item_count = item_count + 1

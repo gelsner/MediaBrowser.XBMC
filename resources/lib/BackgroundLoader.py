@@ -24,13 +24,17 @@ downloadUtils = DownloadUtils()
 class BackgroundRotationThread(threading.Thread):
 
     movie_art_links = []
+    video_art_links = []
     tv_art_links = []
     music_art_links = []
+    musicvideo_art_links = []
     global_art_links = []
     item_art_links = {}
     current_movie_art = 0
+    current_video_art = 0
     current_tv_art = 0
     current_music_art = 0
+    current_musicvideo_art = 0
     current_global_art = 0
     current_item_art = 0
     linksLoaded = False
@@ -144,6 +148,10 @@ class BackgroundRotationThread(threading.Thread):
         if(result.get("movie") != None):
             self.logMsg("Setting Movie Last : " + str(result.get("movie")), level=2)
             WINDOW.setProperty("MB3.Background.Movie.FanArt", result.get("movie")["url"])      
+
+        if(result.get("video") != None):
+            self.logMsg("Setting Video Last : " + str(result.get("video")), level=2)
+            WINDOW.setProperty("MB3.Background.Video.FanArt", result.get("video")["url"])
             
         if(result.get("tv") != None):
             self.logMsg("Setting TV Last : " + str(result.get("tv")), level=2)
@@ -153,6 +161,10 @@ class BackgroundRotationThread(threading.Thread):
             self.logMsg("Setting Music Last : " + str(result.get("music")), level=2)
             WINDOW.setProperty("MB3.Background.Music.FanArt", result.get("music")["url"])   
 
+        if(result.get("musicvideo") != None):
+            self.logMsg("Setting Musicvideo Last : " + str(result.get("musicvideo")), level=2)
+            WINDOW.setProperty("MB3.Background.Musicvideo.FanArt", result.get("musicvideo")["url"])
+
     def saveLastBackground(self):
     
         data = {}
@@ -160,10 +172,14 @@ class BackgroundRotationThread(threading.Thread):
             data["global"] = self.global_art_links[self.current_global_art]
         if(len(self.movie_art_links) > 0):
             data["movie"] = self.movie_art_links[self.current_movie_art]
+        if(len(self.video_art_links) > 0):
+            data["video"] = self.video_art_links[self.current_video_art]
         if(len(self.tv_art_links) > 0):
             data["tv"] = self.tv_art_links[self.current_tv_art]
         if(len(self.music_art_links) > 0):
             data["music"] = self.music_art_links[self.current_music_art]
+        if(len(self.musicvideo_art_links) > 0):
+            data["musicvideo"] = self.music_art_links[self.current_musicvideo_art]
 
         __addon__       = xbmcaddon.Addon(id='plugin.video.xbmb3c')
         __addondir__    = xbmc.translatePath( __addon__.getAddonInfo('profile') )            
@@ -205,7 +221,25 @@ class BackgroundRotationThread(threading.Thread):
             self.current_music_art = self.current_music_art + 1
             if(self.current_music_art == len(self.music_art_links)):
                 self.current_music_art = 0
-            
+
+        if(len(self.musicvideo_art_links) > 0):
+            self.logMsg("setBackgroundLink index musicvideo_art_links " + str(self.current_musicvideo_art + 1) + " of " + str(len(self.musicvideo_art_links)), level=2)
+            artUrl =  self.musicvideo_art_links[self.current_musicvideo_art]["url"]
+            WINDOW.setProperty("MB3.Background.Musicvideo.FanArt", artUrl)
+            self.logMsg("MB3.Background.Musicvideo.FanArt=" + artUrl)
+            self.current_musicvideo_art = self.current_musicvideo_art + 1
+            if(self.current_musicvideo_art == len(self.musicvideo_art_links)):
+                self.current_musicvideo_art = 0
+
+        if(len(self.video_art_links) > 0):
+            self.logMsg("setBackgroundLink index video_art_links " + str(self.current_video_art + 1) + " of " + str(len(self.video_art_links)), level=2)
+            artUrl =  self.video_art_links[self.current_video_art]["url"]
+            WINDOW.setProperty("MB3.Background.Video.FanArt", artUrl)
+            self.logMsg("MB3.Background.Video.FanArt=" + artUrl)
+            self.current_video_art = self.current_video_art + 1
+            if(self.current_video_art == len(self.video_art_links)):
+                self.current_video_art = 0
+
         if(len(self.global_art_links) > 0):
             self.logMsg("setBackgroundLink index global_art_links " + str(self.current_global_art + 1) + " of " + str(len(self.global_art_links)), level=2)
             
@@ -330,8 +364,14 @@ class BackgroundRotationThread(threading.Thread):
         # process collections
         for item in result:
         
+            item_id = item.get("Id")
             collectionType = item.get("CollectionType", "")
             name = item.get("Name")
+            imageTag = ""
+            if(item.get("ImageTags") != None and item.get("ImageTags").get("Primary") != None):
+                imageTag = item.get("ImageTags").get("Primary")
+        
+            primary = "http://localhost:15001/?id=" + str(item_id) + "&type=" + "Primary" + "&tag=" + imageTag
             childCount = item.get("RecursiveItemCount")
             self.logMsg("updateCollectionArtLinks Name : " + str(name), level=1)
             self.logMsg("updateCollectionArtLinks RecursiveItemCount : " + str(childCount), level=1)
@@ -350,6 +390,8 @@ class BackgroundRotationThread(threading.Thread):
             WINDOW.setProperty("xbmb3c_collection_menuitem_action_" + str(collection_count), actionUrl)
             WINDOW.setProperty("xbmb3c_collection_menuitem_collection_" + str(collection_count), name)
             WINDOW.setProperty("xbmb3c_collection_menuitem_content_" + str(collection_count), contentUrl)
+            WINDOW.setProperty("xbmb3c_collection_menuitem_type_" + str(collection_count), collectionType)
+            WINDOW.setProperty("xbmb3c_collection_menuitem_primary_" + str(collection_count), primary)
             #####################################################################################################
 
             #####################################################################################################
@@ -497,6 +539,50 @@ class BackgroundRotationThread(threading.Thread):
         random.shuffle(self.movie_art_links)
         self.logMsg("Background Movie Art Links : " + str(len(self.movie_art_links)))
 
+        # load Video BG
+        videosUrl = "http://" + mb3Host + ":" + mb3Port + "/mediabrowser/Users/" + userid + "/Items?Fields=ParentId,Overview&CollapseBoxSetItems=false&Recursive=true&IncludeItemTypes=Video&format=json"
+
+        try:
+            requesthandle = urllib2.urlopen(videosUrl, timeout=60)
+            jsonData = requesthandle.read()
+            requesthandle.close()
+        except Exception, e:
+            self.logMsg("updateTypeArtLinks urlopen : " + str(e) + " (" + videosUrl + ")", level=0)
+            return False
+
+        result = json.loads(jsonData)
+
+        result = result.get("Items")
+        if(result == None):
+            result = []
+
+        for item in result:
+            images = item.get("BackdropImageTags")
+            id = item.get("Id")
+            parentID = item.get("ParentId")
+            name = item.get("Name")
+            plot = item.get("Overview")
+            if (images == None):
+                images = []
+            index = 0
+            for backdrop in images:
+              
+              info = {}
+              info["url"] = "http://localhost:15001/?id=" + str(id) + "&type=Backdrop" + "&index=" + str(index) + "&tag=" + backdrop
+              info["index"] = index
+              info["id"] = id
+              info["plot"] = plot
+              info["parent"] = parentID
+              info["name"] = name
+              self.logMsg("BG Video Image Info : " + str(info), level=2)
+              
+              if (info not in self.video_art_links):
+                  self.video_art_links.append(info)
+              index = index + 1
+        
+        random.shuffle(self.video_art_links)
+        self.logMsg("Background Video Art Links : " + str(len(self.video_art_links)))
+
         # load TV BG links
         tvUrl = "http://" + mb3Host + ":" + mb3Port + "/mediabrowser/Users/" + userid + "/Items?Fields=ParentId,Overview&CollapseBoxSetItems=false&Recursive=true&IncludeItemTypes=Series&format=json"
 
@@ -570,7 +656,51 @@ class BackgroundRotationThread(threading.Thread):
               
         random.shuffle(self.music_art_links)
         self.logMsg("Background Music Art Links : " + str(len(self.music_art_links)))
+
+        # load Musicvideo BG
+        musicvideosUrl = "http://" + mb3Host + ":" + mb3Port + "/mediabrowser/Users/" + userid + "/Items?Fields=ParentId,Overview&CollapseBoxSetItems=false&Recursive=true&IncludeItemTypes=Musicvideo&format=json"
+
+        try:
+            requesthandle = urllib2.urlopen(musicvideosUrl, timeout=60)
+            jsonData = requesthandle.read()
+            requesthandle.close()
+        except Exception, e:
+            self.logMsg("updateTypeArtLinks urlopen : " + str(e) + " (" + musicvideosUrl + ")", level=0)
+            return False
+
+        result = json.loads(jsonData)
+
+        result = result.get("Items")
+        if(result == None):
+            result = []
+
+        for item in result:
+            images = item.get("BackdropImageTags")
+            id = item.get("Id")
+            parentID = item.get("ParentId")
+            name = item.get("Name")
+            plot = item.get("Overview")
+            if (images == None):
+                images = []
+            index = 0
+            for backdrop in images:
+              
+              info = {}
+              info["url"] = "http://localhost:15001/?id=" + str(id) + "&type=Backdrop" + "&index=" + str(index) + "&tag=" + backdrop
+              info["index"] = index
+              info["id"] = id
+              info["plot"] = plot
+              info["parent"] = parentID
+              info["name"] = name
+              self.logMsg("BG Musicvideo Image Info : " + str(info), level=2)
+              
+              if (info not in self.musicvideo_art_links):
+                  self.musicvideo_art_links.append(info)
+              index = index + 1
         
+        random.shuffle(self.musicvideo_art_links)
+        self.logMsg("Background Musicvideo Art Links : " + str(len(self.musicvideo_art_links)))
+
         #
         # build a map indexed by id that contains a list of BG art for each item
         # this is used for selected item BG rotation
@@ -579,6 +709,16 @@ class BackgroundRotationThread(threading.Thread):
         
         # add movie BG links
         for bg_item in self.movie_art_links:
+            item_id = bg_item["id"]
+            if(self.item_art_links.get(item_id) != None):
+                self.item_art_links[item_id].append(bg_item)
+            else:
+                bg_list = []
+                bg_list.append(bg_item)
+                self.item_art_links[item_id] = bg_list
+
+        # add video BG links
+        for bg_item in self.video_art_links:
             item_id = bg_item["id"]
             if(self.item_art_links.get(item_id) != None):
                 self.item_art_links[item_id].append(bg_item)
@@ -607,6 +747,15 @@ class BackgroundRotationThread(threading.Thread):
                 bg_list.append(bg_item)
                 self.item_art_links[item_id] = bg_list
         
+        # add musicvideo BG links
+        for bg_item in self.musicvideo_art_links:
+            item_id = bg_item["id"]
+            if(self.item_art_links.get(item_id) != None):
+                self.item_art_links[item_id].append(bg_item)
+            else:
+                bg_list = []
+                bg_list.append(bg_item)
+                self.item_art_links[item_id] = bg_list
         
         return True
         
